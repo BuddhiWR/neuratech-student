@@ -11,16 +11,30 @@
 <body>
 
 <header class="header">
-  <h1>Search Students</h1>
-  <p>Find registered students by name or NIC</p>
+  <div class="container header-logo">
+    <img src="assets/images/neuratech-logo.png" alt="Neuratech Logo" class="logo-img">
+    
+    <div>
+      <h1>Search Students</h1>
+      <p>Find registered students by name or NIC</p>
+    </div>
+    
+  </div>
+
+
 </header>
 
-<main class="main-section">
-  <form method="GET" action="" class="search-form">
-    <input type="text" name="q" placeholder="Search by Name or NIC..." value="<?php echo isset($_GET['q']) ? $_GET['q'] : ''; ?>" required>
-    <button type="submit">🔍 Search</button>
-  </form>
+<nav class="nav-bar">
+      <a href="student_list.php">📋 Registered Student List</a>
+    </nav>
 
+<!-- ✅ Search bar -->
+<form method="GET" action="" class="search-form">
+  <input type="text" name="q" placeholder="Search by Name or NIC..." value="<?php echo isset($_GET['q']) ? $_GET['q'] : ''; ?>" required>
+  <button type="submit">🔍 Search</button>
+</form>
+
+<main class="main-section">
 <?php
 $limit = 5;
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
@@ -77,6 +91,9 @@ if ($result->num_rows > 0) {
 }
 ?>
 </main>
+
+<a href="index.php" class="btn back-btn" style="margin: 20px; display: inline-block;">⬅ Back to Home</a>
+
 
 <footer class="footer">
   <p>&copy; <?php echo date("Y"); ?> Neuratech. All rights reserved.</p>

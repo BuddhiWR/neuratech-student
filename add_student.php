@@ -11,6 +11,9 @@
 <body>
 
 <header class="header">
+<div class="container header-logo">
+    <img src="assets/images/neuratech-logo.png" alt="Neuratech Logo" class="logo-img">
+    <div>
   <h1>Neuratech Student Registration</h1>
   <p>Enter student information to register</p>
 </header>
@@ -45,7 +48,11 @@
 
     <button type="submit" name="submit">➕ Register Student</button>
     <button type="button" onclick="window.location.href='qrscan.php'">📷 Scan QR</button>
+
+    <a href="index.php" class="btn back-btn">⬅ Back to Home</a>
   </form>
+
+  
 
 <?php
 if (isset($_POST['submit'])) {
