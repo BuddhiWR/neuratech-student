@@ -13,87 +13,149 @@
 <header class="header">
   <div class="container header-logo">
     <img src="assets/images/neuratech-logo.png" alt="Neuratech Logo" class="logo-img">
-    
     <div>
       <h1>Search Students</h1>
       <p>Find registered students by name or NIC</p>
     </div>
-    
   </div>
-
-
 </header>
 
 <nav class="nav-bar">
-      <a href="student_list.php">📋 Registered Student List</a>
-    </nav>
+  <a href="student_list.php">Registered Student List</a>
+</nav>
 
-<!-- ✅ Search bar -->
-<form method="GET" action="" class="search-form">
-  <input type="text" name="q" placeholder="Search by Name or NIC..." value="<?php echo isset($_GET['q']) ? $_GET['q'] : ''; ?>" required>
-  <button type="submit">🔍 Search</button>
-</form>
+<!-- Search Form -->
+<div class="search-form">
+  <input type="text" id="liveSearchInput" class="search-input" placeholder="Search by Name or NIC...">
+  <button type="button" id="scanBtn" class="btn">📷 Scan QR</button>
+  <button type="button" id="exportBtn" class="btn">Export to CSV</button>
+</div>
 
-<main class="main-section">
-<?php
-$limit = 5;
-$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
-$q = isset($_GET['q']) ? $conn->real_escape_string($_GET['q']) : '';
-$offset = ($page - 1) * $limit;
+<!-- QR Scanner View -->
+<div id="scanner" style="display:none; text-align:center;">
+  <div id="qr-reader" style="width: 300px; margin: auto;"></div>
+  <p id="scanResult" style="margin-top:10px;"></p>
+</div>
 
-// Count total
-$countSql = "SELECT COUNT(*) AS total FROM students WHERE name LIKE '%$q%' OR nic LIKE '%$q%'";
-$countResult = $conn->query($countSql);
-$total = $countResult->fetch_assoc()['total'];
-$totalPages = ceil($total / $limit);
+<!-- Results -->
+<div id="liveResults" class="search-results"></div>
+<a href="index.php" class="btn back-btn" style="margin: 20px;">⬅ Back to Home</a>
 
-// Search & limit
-$sql = "SELECT * FROM students WHERE name LIKE '%$q%' OR nic LIKE '%$q%' ORDER BY id DESC LIMIT $limit OFFSET $offset";
-$result = $conn->query($sql);
+<!-- QR + Search Scripts -->
+<script src="https://unpkg.com/html5-qrcode@2.3.8"></script>
+<script>
+  const input = document.getElementById('liveSearchInput');
+  const resultsDiv = document.getElementById('liveResults');
+  const scanBtn = document.getElementById('scanBtn');
+  const scannerDiv = document.getElementById('scanner');
+  const scanResult = document.getElementById('scanResult');
+  let html5QrCode;
 
-if ($result->num_rows > 0) {
-  echo "<div class='search-results'>";
-  while ($row = $result->fetch_assoc()) {
-    $studentId = date("Y") . str_pad($row['id'], 3, '0', STR_PAD_LEFT);
-    echo "
-    <div class='student-result'>
-      <img src='{$row['profilePhoto']}' alt='Photo of {$row['name']}' class='result-photo'>
-      <div class='result-info'>
-        <h3>{$row['name']}</h3>
-        <p><strong>Student ID:</strong> $studentId</p>
-        <p><strong>NIC:</strong> {$row['nic']}</p>
-        <p><strong>School:</strong> {$row['school']}</p>
-        <p><strong>Contact:</strong> {$row['contactNo']}</p>
-        <a href='generate_pdf.php?id={$row['id']}' class='btn' target='_blank'>📄 PDF Card</a>
-      </div>
-    </div>";
+  // Search by typing
+  input.addEventListener('input', () => {
+    const query = input.value.trim();
+    if (!query) {
+      resultsDiv.innerHTML = '';
+      return;
+    }
+    fetchStudents(query);
+  });
+
+  // Fetch from search_api
+  function fetchStudents(query) {
+    fetch(`search_api.php?q=${encodeURIComponent(query)}`)
+      .then(res => res.json())
+      .then(data => {
+        resultsDiv.innerHTML = '';
+        if (data.length === 0) {
+          resultsDiv.innerHTML = '<p style="text-align:center;">No matching students found.</p>';
+          return;
+        }
+
+        data.forEach(student => {
+          const studentId = new Date().getFullYear() + String(student.id).padStart(3, '0');
+          resultsDiv.innerHTML += `
+            <div class="student-result">
+              <img src="${student.profilePhoto}" alt="Photo" class="result-photo" />
+              <div class="result-info">
+                <h3>${student.name}</h3>
+                <p><strong>Student ID:</strong> ${studentId}</p>
+                <p><strong>NIC:</strong> ${student.nic}</p>
+                <p><strong>School:</strong> ${student.school}</p>
+                <p><strong>Contact:</strong> ${student.contactNo}</p>
+                <a href="generate_pdf.php?id=${student.id}" class="btn" target="_blank">Download PDF</a>
+              </div>
+            </div>
+          `;
+        });
+      });
   }
-  echo "</div>";
 
-  // Pagination
-  if ($totalPages > 1) {
-    echo "<div class='pagination'>";
-    if ($page > 1) {
-      echo "<a href='?q=$q&page=" . ($page - 1) . "'>⬅ Prev</a>";
+  // Start QR Scan
+  scanBtn.addEventListener('click', () => {
+    scannerDiv.style.display = 'block';
+    scanResult.textContent = "";
+    document.getElementById('qr-reader').innerHTML = "";
+
+    html5QrCode = new Html5Qrcode("qr-reader");
+    const config = { fps: 10, qrbox: { width: 250, height: 250 } };
+
+    html5QrCode.start(
+      { facingMode: "environment" },
+      config,
+      qrCodeMessage => {
+        html5QrCode.stop().then(() => {
+          scannerDiv.style.display = 'none';
+          scanResult.textContent = "Scanned: " + qrCodeMessage;
+
+          // Extract NIC from URL or use full QR content as fallback
+          const nic = qrCodeMessage.includes("?q=")
+            ? qrCodeMessage.split("?q=")[1]
+            : qrCodeMessage;
+          input.value = nic;
+          fetchStudents(nic);
+        });
+      },
+      errorMessage => {
+        // Optionally show errors
+        console.warn("QR scan error:", errorMessage);
+      }
+    ).catch(err => {
+      console.error("Unable to start scanning:", err);
+      scanResult.textContent = "Camera not available or permission denied.";
+    });
+  });
+</script>
+
+<!-- Export CSV -->
+<script>
+  const exportBtn = document.getElementById('exportBtn');
+  exportBtn.addEventListener('click', () => {
+    const studentCards = document.querySelectorAll('.student-result');
+    if (studentCards.length === 0) {
+      alert('No student data to export.');
+      return;
     }
-    for ($i = 1; $i <= $totalPages; $i++) {
-      $active = $i == $page ? 'active' : '';
-      echo "<a href='?q=$q&page=$i' class='$active'>$i</a>";
-    }
-    if ($page < $totalPages) {
-      echo "<a href='?q=$q&page=" . ($page + 1) . "'>Next ➡</a>";
-    }
-    echo "</div>";
-  }
 
-} else {
-  echo "<p style='text-align:center;'>No students found for '<strong>$q</strong>'</p>";
-}
-?>
-</main>
+    let csv = "Student ID,Name,NIC,School,Contact\n";
+    studentCards.forEach(card => {
+      const name = card.querySelector('h3').innerText;
+      const studentId = card.querySelector('p strong').nextSibling.textContent.trim();
+      const nic = card.querySelectorAll('p')[1].innerText.split(":")[1].trim();
+      const school = card.querySelectorAll('p')[2].innerText.split(":")[1].trim();
+      const contact = card.querySelectorAll('p')[3].innerText.split(":")[1].trim();
+      csv += `"${studentId}","${name}","${nic}","${school}","${contact}"\n`;
+    });
 
-<a href="index.php" class="btn back-btn" style="margin: 20px; display: inline-block;">⬅ Back to Home</a>
-
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', 'neuratech_students.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  });
+</script>
 
 <footer class="footer">
   <p>&copy; <?php echo date("Y"); ?> Neuratech. All rights reserved.</p>

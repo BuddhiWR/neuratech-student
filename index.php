@@ -25,13 +25,13 @@
         <div class="card">
             <h3>Add Student</h3>
             <p>Register new student details to the system</p>
-            <a href="add_student.php" class="btn">➕ Add Student</a>
+            <a href="add_student.php" class="btn">Add Student</a>
         </div>
 
         <div class="card">
             <h3>Search Student</h3>
             <p>Find student records by NIC or name</p>
-            <a href="search_student.php" class="btn">🔍 Search Student</a>
+            <a href="search_student.php" class="btn">Search Student</a>
         </div>
     </div>
 </main>

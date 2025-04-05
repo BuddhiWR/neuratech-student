@@ -2,7 +2,7 @@
 $host = "localhost";
 $user = "root";
 $password = "";
-$dbname = "neuratech_student"; // ✅ UPDATED name
+$dbname = "neuratech_student"; // UPDATED name
 
 $conn = new mysqli($host, $user, $password, $dbname);
 
